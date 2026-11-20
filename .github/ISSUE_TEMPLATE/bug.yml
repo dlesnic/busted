@@ -1,0 +1,24 @@
+name: Bug
+description: Something does not work the way it should
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Busted version
+      description: Shown on chrome://extensions
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Browser and system
+      placeholder: Chrome 142 on macOS
+  - type: input
+    attributes:
+      label: Site it happened on
+      description: Leave empty if you would rather not say.

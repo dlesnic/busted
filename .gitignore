@@ -1,4 +1,4 @@
-# Only the extension source, tests and tools are public. Everything else stays local.
+# Only the extension source, tests, tools and docs are public. Everything else stays local.
 /*
 !/.gitignore
 !/README.md
@@ -17,6 +17,11 @@
 !/icons/
 !/tests/
 !/tools/
+!/docs/
+!/.github/
+!/package.json
+!/package-lock.json
+!/CHANGELOG.md
 /tools/build_guides.py
 .DS_Store
 node_modules/

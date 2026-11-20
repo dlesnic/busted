@@ -1,8 +1,8 @@
 // End-to-end tests for the Busted extension in a real Chromium.
 // Loads the unpacked extension, serves fake sites on 127.0.0.1:8123 and drives the
 // popup, the blocked page, the wheel, focus sessions and daily limits. Takes about 4 minutes.
-// setup (once, in any folder): npm i playwright-core@1.58 && npx playwright-core install chromium
-// usage: node tests/e2e.mjs <extension dir> [only-substring]   e.g. node tests/e2e.mjs . bug1
+// setup (once): npm install && npx playwright-core install chromium
+// usage: npm test, or node tests/e2e.mjs <extension dir> [only-substring]   e.g. node tests/e2e.mjs . bug1
 // The daily-limit tests need the test browser to be left alone: they count time in the front tab.
 import { chromium } from "playwright-core";
 import http from "node:http";
@@ -408,7 +408,8 @@ await test("pass: when a pass runs out the block returns and the open tab is kic
 // ---------------------------------------------------------------- part of a site
 const todayKey = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const popup = async () => { const p = await ctx.newPage(); await p.goto(ext("popup.html")); return p; };
-const loads = async (p, url, what) => { await visit(p, url); eq(await p.title(), `OK ${new URL(url).host}`, what); };
+// A tab on the blocked page may be going back by itself at the same moment, so wait for the title instead of reading it once.
+const loads = async (p, url, what) => { await visit(p, url); await waitFor(async () => (await p.title()) === `OK ${new URL(url).host}`, what); };
 
 await test("path: typing youtube.com/shorts adds only that part; a pasted link still means the whole site", async () => {
   const p = await popup();
