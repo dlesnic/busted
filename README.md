@@ -81,8 +81,8 @@ Chrome's own error page would do the job. Busted shows Hoot, who counts how many
 
 <table>
   <tr>
-    <td width="50%" align="center"><img src="docs/wheel.gif" width="400" alt="The wheel spins and stops on the slice called Nothing. Hoot pops up over the wheel."></td>
-    <td width="50%" align="center"><img src="docs/jackpot.gif" width="400" alt="The wheel stops on the 5 minute pass. Lucky the fox throws a net over Hoot and the site opens for 5 minutes."></td>
+    <td width="50%" align="center"><img src="docs/wheel.gif" alt="The wheel spins and stops on the slice called Nothing. Hoot pops up over the wheel."></td>
+    <td width="50%" align="center"><img src="docs/jackpot.gif" alt="The wheel stops on the 5 minute pass. Lucky the fox throws a net over Hoot and the site opens for 5 minutes."></td>
   </tr>
   <tr>
     <td align="center">Most slices send you back to work, or to do 10 push-ups.</td>
