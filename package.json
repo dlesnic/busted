@@ -1,13 +1,13 @@
 {
   "name": "busted",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "description": "Website blocker for Chrome: block sites always, on a schedule or after a daily limit, and run focus sessions.",
   "license": "MIT",
   "repository": "github:dlesnic/busted",
   "homepage": "https://gotbusted.app",
   "scripts": {
-    "test": "node tests/e2e.mjs .",
+    "test": "node tests/e2e.mjs extension",
     "build": "sh tools/package.sh"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 // One-click presets. A preset can cover several domains (e.g. X = x.com + twitter.com),
 // or only a part of a site (youtube.com/shorts).
 // Subdomains are covered automatically (youtube.com also blocks m.youtube.com).
-// Icons are bundled in icons/sites/<first-domain>.png, or <icon>.png if the preset names one.
+// Icons are bundled in /icons/sites/<first-domain>.png, or <icon>.png if the preset names one.
 
 export const PRESET_GROUPS = [
   {
@@ -92,6 +92,6 @@ export const PRESET_GROUPS = [
 /** Map every preset domain -> bundled icon path. */
 export const PRESET_ICON = Object.fromEntries(
   PRESET_GROUPS.flatMap((g) => g.items).flatMap((p) =>
-    p.domains.map((d) => [d, `icons/sites/${p.icon || p.domains[0]}.png`])
+    p.domains.map((d) => [d, `/icons/sites/${p.icon || p.domains[0]}.png`])
   )
 );

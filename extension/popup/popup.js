@@ -1,8 +1,8 @@
 import {
   DAY_LABELS, STATE_KEYS, normalizeDomain, parseTarget, siteKey, describeSchedule,
   loadState, blockedNow, siteStatus, focusActive, focusEnd, FOCUS_EXIT_WAIT_SEC, limitLeft,
-} from "./shared.js";
-import { PRESET_GROUPS, PRESET_ICON } from "./presets.js";
+} from "../lib/shared.js";
+import { PRESET_GROUPS, PRESET_ICON } from "../lib/presets.js";
 
 const $ = (sel) => document.querySelector(sel);
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon first

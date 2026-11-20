@@ -1,10 +1,10 @@
 #!/bin/sh
-# Dev-only: download preset site icons into icons/sites/ (run from repo root).
-# Not part of the packaged extension. Re-run after editing presets.js.
+# Dev-only: download preset site icons into extension/icons/sites/.
+# Not part of the packaged extension. Re-run after editing extension/lib/presets.js.
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../extension"
 node --input-type=module -e '
-import { PRESET_GROUPS } from "./presets.js";
+import { PRESET_GROUPS } from "./lib/presets.js";
 for (const g of PRESET_GROUPS) for (const p of g.items) console.log(p.domains[0]);
 ' | while read -r d; do
   src=$d

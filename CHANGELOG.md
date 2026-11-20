@@ -2,6 +2,10 @@
 
 Dates are the day each version was built.
 
+## 1.3.2 (in development)
+
+- The files moved into folders (`popup/`, `blocked/`, `background/`, `lib/`). Nothing changes in how it works.
+
 ## 1.3.1 (2026-11-18)
 
 - New store title and summary: "Busted: Website Blocker & Focus Mode".

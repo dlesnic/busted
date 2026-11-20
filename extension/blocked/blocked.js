@@ -1,5 +1,5 @@
-import { parseTarget, siteKey, todayKey, loadState, findBlock, focusActive, focusEnd, urlMatches, FOCUS_EXIT_WAIT_SEC } from "./shared.js";
-import { PRESET_GROUPS } from "./presets.js";
+import { parseTarget, siteKey, todayKey, loadState, findBlock, focusActive, focusEnd, urlMatches, FOCUS_EXIT_WAIT_SEC } from "../lib/shared.js";
+import { PRESET_GROUPS } from "../lib/presets.js";
 
 const $ = (id) => document.getElementById(id);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

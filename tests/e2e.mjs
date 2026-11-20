@@ -2,7 +2,7 @@
 // Loads the unpacked extension, serves fake sites on 127.0.0.1:8123 and drives the
 // popup, the blocked page, the wheel, focus sessions and daily limits. Takes about 4 minutes.
 // setup (once): npm install && npx playwright-core install chromium
-// usage: npm test, or node tests/e2e.mjs <extension dir> [only-substring]   e.g. node tests/e2e.mjs . bug1
+// usage: npm test, or node tests/e2e.mjs <extension dir> [only-substring]   e.g. node tests/e2e.mjs extension bug1
 // The daily-limit tests need the test browser to be left alone: they count time in the front tab.
 import { chromium } from "playwright-core";
 import http from "node:http";
@@ -42,7 +42,7 @@ ctx.on("page", (p) => p.on("pageerror", (e) => errors.push(`${p.url()}: ${e.mess
 
 // Control page: an extension page that stays open, used to call chrome.* APIs.
 const ctl = await ctx.newPage();
-await ctl.goto(ext("popup.html"));
+await ctl.goto(ext("popup/popup.html"));
 const api = (fn, arg) => ctl.evaluate(fn, arg);
 const rules = () => api(() => chrome.declarativeNetRequest.getDynamicRules().then((r) => r.map((x) => x.condition.urlFilter).sort()));
 const store = (keys) => api((k) => chrome.storage.local.get(k), keys);
@@ -72,7 +72,7 @@ async function reset() {
 async function visit(page, url) {
   try { await page.goto(url, { waitUntil: "domcontentloaded" }); } catch {}
 }
-const isBlockedPage = (page, domain) => page.url().startsWith(ext("blocked.html")) && page.url().includes(`site=${encodeURIComponent(domain)}`);
+const isBlockedPage = (page, domain) => page.url().startsWith(ext("blocked/blocked.html")) && page.url().includes(`site=${encodeURIComponent(domain)}`);
 
 const results = [];
 async function test(name, fn) {
@@ -97,7 +97,7 @@ await test("bug3: tick alarm is aligned to whole minutes", async () => {
 
 // ---------------------------------------------------------------- popup
 await test("popup: add a site by typing, normalised, rule created", async () => {
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.fill("#domain", "https://www.YouTube.com/watch?v=1");
   await p.click("#add-form button[type=submit]");
   await waitFor(async () => (await p.locator(".item .domain").allTextContents()).join() === "youtube.com", "list shows youtube.com");
@@ -109,7 +109,7 @@ await test("popup: add a site by typing, normalised, rule created", async () => 
 
 await test("popup: duplicate and invalid input show errors, nothing added", async () => {
   await setStore({ sites: [site("youtube.com")] });
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.fill("#domain", "youtube.com"); await p.click("#add-form button[type=submit]");
   await waitFor(async () => (await p.textContent("#error")).includes("already"), "duplicate error");
   await p.fill("#domain", "not a domain"); await p.click("#add-form button[type=submit]");
@@ -118,7 +118,7 @@ await test("popup: duplicate and invalid input show errors, nothing added", asyn
 });
 
 await test("popup: preset chip adds and removes all its domains", async () => {
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.locator(".chip", { hasText: /^X$/ }).click();
   await waitFor(async () => ((await store("sites")).sites || []).map((s) => s.domain).sort().join() === "twitter.com,x.com", "x.com + twitter.com added");
   await waitFor(async () => (await rules()).join() === "||twitter.com^,||x.com^", "two rules");
@@ -129,7 +129,7 @@ await test("popup: preset chip adds and removes all its domains", async () => {
 });
 
 await test("popup: More shows every preset group", async () => {
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   eq(await p.locator(".chip").count(), 9, "chips in Popular");
   await p.click("#more");
   eq(await p.locator(".group-name").allTextContents(), ["Popular", "Social & chat", "Video & streaming", "News", "Shopping", "Games"], "groups");
@@ -140,7 +140,7 @@ await test("popup: More shows every preset group", async () => {
 
 await test("popup: pause switch lifts the block, re-enable restores it", async () => {
   await setStore({ sites: [site("youtube.com")] });
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.locator(".item .switch").click();
   await waitFor(async () => (await p.locator(".item .pill").textContent()) === "Paused", "pill Paused");
   eq(await p.textContent("#summary"), "0 of 1 site blocked right now", "summary");
@@ -151,7 +151,7 @@ await test("popup: pause switch lifts the block, re-enable restores it", async (
 
 await test("popup: schedule editor saves mode, days and times", async () => {
   await setStore({ sites: [site("youtube.com")] });
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.locator(".item .toggle-edit").click();
   await p.locator(".item .seg button[data-mode=schedule]").click();
   await waitFor(async () => { const c = (await store("sites")).sites[0].schedule; return c && c.days.join() === "1,2,3,4,5" && c.start === "09:00" && c.end === "18:00"; }, "default schedule");
@@ -181,7 +181,7 @@ await test("popup: schedule editor saves mode, days and times", async () => {
 
 await test("popup: remove deletes the site and shows the empty state", async () => {
   await setStore({ sites: [site("youtube.com")] });
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await p.locator(".item .remove").click();
   await waitFor(async () => ((await store("sites")).sites || []).length === 0, "removed");
   ok(await p.locator("#empty").isVisible(), "empty state visible");
@@ -191,7 +191,7 @@ await test("popup: remove deletes the site and shows the empty state", async () 
 
 await test("bug2: popup shows an active wheel pass and stops counting it as blocked", async () => {
   await setStore({ sites: [site("youtube.com"), site("reddit.com")], passes: { "youtube.com": Date.now() + 60000 } });
-  const p = await ctx.newPage(); await p.goto(ext("popup.html"));
+  const p = await ctx.newPage(); await p.goto(ext("popup/popup.html"));
   await waitFor(async () => (await p.locator(".item").count()) === 2, "two items");
   eq(await p.textContent("#summary"), "1 of 2 sites blocked right now", "summary");
   eq(await p.locator(".item .pill").allTextContents(), ["Wheel pass", "Blocked"], "pills");
@@ -289,7 +289,7 @@ await test("blocked page: shows site, counts attempts, buttons behave", async ()
 });
 
 await test("wheel: the close button is clickable across its whole face", async () => {
-  const p = await ctx.newPage(); await p.goto(ext("blocked.html?site=example.com"));
+  const p = await ctx.newPage(); await p.goto(ext("blocked/blocked.html?site=example.com"));
   await p.click("#wheel-open");
   await sleep(500);
   const hits = await p.evaluate(() => {
@@ -302,7 +302,7 @@ await test("wheel: the close button is clickable across its whole face", async (
 });
 
 await test("blocked page: no site parameter hides the wheel", async () => {
-  const p = await ctx.newPage(); await p.goto(ext("blocked.html"));
+  const p = await ctx.newPage(); await p.goto(ext("blocked/blocked.html"));
   ok(await p.locator("#wheel-open").isHidden(), "wheel button hidden");
   eq(await p.textContent("#site"), "this site", "fallback name");
 });
@@ -378,7 +378,7 @@ await test("bug4: a pass won on x.com also unlocks twitter.com", async () => {
 });
 
 await test("bug1: jackpot still gives the pass when the cutscene file fails to load", async () => {
-  const { took } = await jackpotTest("blockme.test", () => { document.getElementById("cutscene").src = "art/missing.webm"; }, ["blockme.test"], 20000);
+  const { took } = await jackpotTest("blockme.test", () => { document.getElementById("cutscene").src = "/art/missing.webm"; }, ["blockme.test"], 20000);
   console.log(`      pass after ${took} ms`);
 });
 
@@ -407,7 +407,7 @@ await test("pass: when a pass runs out the block returns and the open tab is kic
 
 // ---------------------------------------------------------------- part of a site
 const todayKey = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
-const popup = async () => { const p = await ctx.newPage(); await p.goto(ext("popup.html")); return p; };
+const popup = async () => { const p = await ctx.newPage(); await p.goto(ext("popup/popup.html")); return p; };
 // A tab on the blocked page may be going back by itself at the same moment, so wait for the title instead of reading it once.
 const loads = async (p, url, what) => { await visit(p, url); await waitFor(async () => (await p.title()) === `OK ${new URL(url).host}`, what); };
 

@@ -1,4 +1,4 @@
-import { blockedNow, findBlock, focusActive, focusEnd, focusOpenHosts, limitLeft, loadState, siteBlocked, siteKey, todayKey, urlMatches } from "./shared.js";
+import { blockedNow, findBlock, focusActive, focusEnd, focusOpenHosts, limitLeft, loadState, siteBlocked, siteKey, todayKey, urlMatches } from "../lib/shared.js";
 
 // Re-evaluate schedules every minute.
 const ALARM = "focus-tick";
@@ -116,7 +116,7 @@ async function settle() {
 
 // The address the tab was on rides along, so the blocked page can send the tab back when the block lifts.
 function blockedPageUrl(name, url) {
-  return chrome.runtime.getURL(`blocked.html?site=${encodeURIComponent(name)}&url=${encodeURIComponent(url)}`);
+  return chrome.runtime.getURL(`blocked/blocked.html?site=${encodeURIComponent(name)}&url=${encodeURIComponent(url)}`);
 }
 
 /** Redirect a tab to the blocked page if its URL is blocked right now. */

@@ -42,10 +42,10 @@ A website blocker sees the address of every tab you open. The Chrome Web Store h
 - **No host permissions.** Busted sees the address of a tab. It cannot read or change what is on the page.
 - **No network requests.** This prints nothing:
   ```sh
-  grep -nE "fetch\(|XMLHttpRequest|WebSocket|sendBeacon" *.js
+  grep -rnE "fetch\(|XMLHttpRequest|WebSocket|sendBeacon" extension/
   ```
 - **No account, no analytics.** Your list, schedules and counters stay in `chrome.storage.local` on your device.
-- **The store version is this code.** `tools/package.sh` zips these same files, unchanged, and that zip is what I upload.
+- **The store version is built from this code.** `tools/package.sh` zips the `extension/` folder as it is, and that zip is what I upload. The tag [`v1.3.1`](https://github.com/dlesnic/busted/tree/v1.3.1) is the exact source of the version in the store today.
 
 Two things open a web page in your browser. Removing the extension opens a short "why did you leave" page on gotbusted.app, with the version number in the address and nothing else. The "Rate Busted" button opens the Chrome Web Store.
 
@@ -89,7 +89,7 @@ Chrome's own error page would do the job. Busted shows Hoot, who counts how many
   </tr>
 </table>
 
-The pass slice is drawn smaller than your real chance of hitting it. The actual odds are in [`blocked.js`](blocked.js), if you want to spoil it.
+The pass slice is drawn smaller than your real chance of hitting it. The actual odds are in [`blocked.js`](extension/blocked/blocked.js), if you want to spoil it.
 
 ## Install
 
@@ -99,19 +99,25 @@ The pass slice is drawn smaller than your real chance of hitting it. The actual 
 
 1. Download or clone this repository.
 2. Open `chrome://extensions` and turn on Developer mode.
-3. Click "Load unpacked" and pick the folder.
+3. Click "Load unpacked" and pick the `extension` folder.
 
 Tested in Chrome and Chromium. I have not tried Edge, Brave or other Chromium browsers.
 
 ## How it works
 
-| File | Lines | What it does |
-|---|---|---|
-| [`shared.js`](shared.js) | 161 | The rules: parse a list entry, check a schedule or a limit, decide if an address is blocked right now. Its only browser call reads storage |
-| [`background.js`](background.js) | 185 | The service worker. Turns the list into block rules, checks schedules every minute, counts daily-limit time, sends blocked tabs to the blocked page |
-| [`popup.js`](popup.js) | 411 | The popup: the list, the schedule and limit editor, focus sessions |
-| [`blocked.js`](blocked.js) | 399 | The blocked page and the wheel |
-| [`presets.js`](presets.js) | 97 | The Quick add sites |
+```
+extension/
+  manifest.json
+  background/service-worker.js   turns the list into block rules, checks schedules every minute,
+                                 counts daily-limit time, sends blocked tabs to the blocked page
+  popup/                         the popup: the list, the schedule and limit editor, focus sessions
+  blocked/                       the blocked page and the wheel
+  lib/shared.js                  the rules: is this address blocked right now
+  lib/presets.js                 the Quick add sites
+  icons/  art/                   icons and mascot art
+tests/e2e.mjs                    end-to-end tests
+tools/package.sh                 builds the store zip
+```
 
 1. The popup saves your list to `chrome.storage.local`.
 2. The service worker rebuilds the block rules from it: one `declarativeNetRequest` rule per entry that is active right now. Chrome itself stops the request before the site loads.
@@ -148,4 +154,4 @@ If Busted helps you, a [review on the Chrome Web Store](https://chromewebstore.g
 
 ## License
 
-The code is MIT, see [LICENSE](LICENSE). The Busted name, the icon and the mascot art in `art/` are not covered by it. The site icons in `icons/sites/` belong to their owners.
+The code is MIT, see [LICENSE](LICENSE). The Busted name, the icon and the mascot art in `extension/art/` are not covered by it. The site icons in `extension/icons/sites/` belong to their owners.
