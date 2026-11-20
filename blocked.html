@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Nope. 🚫</title>
+  <link rel="icon" href="icons/icon32.png" />
+  <link rel="stylesheet" href="blocked.css" />
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+
+  <main>
+    <div class="guard" id="guard" aria-hidden="true" title="Hoot"><img class="hoot3d" src="art/hoot_v2.webp" alt="" /></div>
+    <div class="badge">ACCESS DENIED</div>
+    <h1 id="headline">Nice try.</h1>
+    <p class="roast" id="roast"></p>
+
+    <div class="counter">
+      <span class="num" id="count">1</span>
+      <span class="label" id="count-label">attempt today on <b id="site">this site</b></span>
+    </div>
+    <p class="verdict" id="verdict"></p>
+    <div class="note" id="note" hidden>
+      <span id="note-text"></span>
+      <button id="focus-exit" class="note-btn" type="button" hidden>End session early</button>
+    </div>
+
+    <div class="actions">
+      <button id="back" class="primary">😤 Fine, back to work</button>
+      <button id="unblock" class="runaway">Unblock it</button>
+    </div>
+    <button id="wheel-open" class="wheel-btn">🎰 Spin the Wheel of Freedom</button>
+
+    <div class="suggest">
+      <span class="muted">Instead, you could:</span>
+      <span id="idea"></span>
+      <button id="reroll" class="link" title="Another idea">↻</button>
+    </div>
+  </main>
+
+  <div id="wheel-modal" class="modal" hidden>
+    <div class="casino">
+      <button id="wheel-close" class="x" title="Close">✕</button>
+      <h2 class="marquee">WHEEL <span>of</span> FREEDOM</h2>
+      <p class="muted small">One slice buys you 5 minutes. Guess how big it is.</p>
+      <div class="stage">
+        <div class="flapper" id="flapper" aria-hidden="true"></div>
+        <svg id="wheel" viewBox="-120 -120 240 240" aria-label="Wheel of Freedom"></svg>
+        <img id="hub" class="hub" src="art/hoot_v2.webp" alt="" />
+        <img id="laugh" class="laugh" src="art/hoot_v2.webp" alt="" />
+      </div>
+      <video id="cutscene" class="cutscene" src="art/cutscene.webm" playsinline hidden></video>
+      <p id="wheel-result" class="wheel-result"></p>
+      <button id="wheel-spin" class="spin-btn">SPIN</button>
+    </div>
+  </div>
+  <div id="confetti" aria-hidden="true"></div>
+
+  <footer id="clock"></footer>
+
+  <script type="module" src="blocked.js"></script>
+</body>
+</html>

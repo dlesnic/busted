@@ -1,0 +1,22 @@
+# Only the extension source, tests and tools are public. Everything else stays local.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/manifest.json
+!/background.js
+!/shared.js
+!/presets.js
+!/popup.html
+!/popup.css
+!/popup.js
+!/blocked.html
+!/blocked.css
+!/blocked.js
+!/art/
+!/icons/
+!/tests/
+!/tools/
+/tools/build_guides.py
+.DS_Store
+node_modules/

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Busted</title>
+  <link rel="icon" href="icons/icon32.png" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img class="logo" src="icons/icon128.png" alt="" />
+      <div>
+        <h1>Busted</h1>
+        <p id="summary" class="muted">Loading…</p>
+      </div>
+    </div>
+    <button id="focus-btn" class="focus-btn" type="button" title="Focus session">🎯 Focus</button>
+  </header>
+
+  <section id="focus-panel" class="panel" hidden>
+    <div id="focus-setup">
+      <div class="seg" id="focus-mins">
+        <button type="button" data-min="25">25 min</button>
+        <button type="button" data-min="50">50 min</button>
+        <input id="focus-custom" type="number" min="1" max="180" placeholder="Custom" title="Minutes (up to 180)" />
+      </div>
+      <div class="seg" id="focus-mode">
+        <button type="button" data-mode="list">Block my list</button>
+        <button type="button" data-mode="all">Block everything</button>
+      </div>
+      <div id="focus-allow" hidden>
+        <p class="hint muted">Everything is blocked, except:</p>
+        <div id="allow-chips" class="chip-row"></div>
+        <form id="allow-form" autocomplete="off">
+          <input id="allow-input" type="text" placeholder="docs.google.com" spellcheck="false" />
+          <button type="submit">Allow</button>
+        </form>
+      </div>
+      <button id="focus-start" class="primary wide" type="button">Start focus</button>
+      <p id="focus-hint" class="hint muted">No pause and no changes. Ending early takes a 60-second wait.</p>
+    </div>
+    <div id="focus-confirm" hidden>
+      <p id="confirm-title" class="confirm-title"></p>
+      <p id="confirm-what" class="confirm-what"></p>
+      <p class="confirm-warn">No pause and no changes while it runs. Ending early takes a 60-second wait.</p>
+      <div class="confirm-row">
+        <button id="confirm-back" type="button">Go back</button>
+        <button id="confirm-go" class="primary" type="button">Lock me in</button>
+      </div>
+    </div>
+    <div id="focus-running" hidden>
+      <div id="focus-left" class="big">00:00</div>
+      <p id="focus-what" class="muted"></p>
+      <p id="exit-note" class="exit-note" hidden></p>
+      <button id="focus-exit" class="wide" type="button">End session early</button>
+    </div>
+  </section>
+
+  <form id="add-form" autocomplete="off">
+    <input id="domain" type="text" placeholder="youtube.com or youtube.com/shorts" spellcheck="false" />
+    <button type="submit" class="primary">Block</button>
+  </form>
+  <button id="block-current" class="ghost wide">＋ Block current site</button>
+  <p id="error" class="error" hidden></p>
+
+  <section class="quick">
+    <div class="quick-head">
+      <span class="muted">Quick add</span>
+      <button id="more" class="link" type="button">More ▾</button>
+    </div>
+    <div id="chips"></div>
+  </section>
+
+  <ul id="list"></ul>
+  <div id="empty" class="empty" hidden>
+    <div class="empty-emoji">🧘</div>
+    <p>No banned sites yet.<br />Add your nemesis above.</p>
+  </div>
+
+  <div id="rate" class="rate" hidden>
+    <p>Hoot has been judging you for a while. Judge him back?</p>
+    <div class="rate-row">
+      <button id="rate-go" class="primary" type="button">Rate Busted</button>
+      <button id="rate-no" type="button">No thanks</button>
+    </div>
+  </div>
+
+  <template id="item-tpl">
+    <li class="item">
+      <div class="row">
+        <img class="fav" alt="" />
+        <div class="info">
+          <div class="domain"></div>
+          <div class="meta">
+            <span class="pill"></span>
+            <span class="sched muted"></span>
+          </div>
+        </div>
+        <button class="icon toggle-edit" title="Schedule or daily limit">⏱</button>
+        <label class="switch" title="Enable / pause">
+          <input type="checkbox" class="enabled" />
+          <span></span>
+        </label>
+        <button class="icon remove" title="Remove">✕</button>
+      </div>
+      <div class="editor" hidden>
+        <div class="seg">
+          <button type="button" data-mode="always">Always</button>
+          <button type="button" data-mode="schedule">Schedule</button>
+          <button type="button" data-mode="limit">Daily limit</button>
+        </div>
+        <div class="limit-fields">
+          <div class="limit-row">
+            <button type="button" data-limit="15">15</button>
+            <button type="button" data-limit="30">30</button>
+            <button type="button" data-limit="60">60</button>
+            <input type="number" class="limit-min" min="1" max="600" />
+            <span class="muted">min a day</span>
+          </div>
+          <p class="hint muted">Open until the minutes run out, then blocked until midnight. Only time with the site in front of you counts.</p>
+        </div>
+        <div class="sched-fields">
+          <div class="days"></div>
+          <div class="presets">
+            <button type="button" data-preset="weekdays">Weekdays</button>
+            <button type="button" data-preset="weekends">Weekends</button>
+            <button type="button" data-preset="all">Every day</button>
+          </div>
+          <div class="times">
+            <label>From <input type="time" class="start" /></label>
+            <label>To <input type="time" class="end" /></label>
+          </div>
+          <p class="hint muted">Same start &amp; end = all day. End before start = overnight.</p>
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
