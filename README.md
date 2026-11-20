@@ -13,7 +13,6 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/hboldmfdfgijnjjndagdnalehfjngphg"><img src="https://img.shields.io/chrome-web-store/v/hboldmfdfgijnjjndagdnalehfjngphg?label=chrome%20web%20store&color=7c5cff" alt="Version on the Chrome Web Store"></a>
-  <a href="https://github.com/dlesnic/busted/actions/workflows/tests.yml"><img src="https://github.com/dlesnic/busted/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   <img src="https://img.shields.io/badge/manifest-v3-7c5cff" alt="Manifest V3">
   <img src="https://img.shields.io/badge/data%20collected-none-2ea44f" alt="No data collected">
   <a href="LICENSE"><img src="https://img.shields.io/badge/code-MIT-ff5c8a" alt="MIT license"></a>
@@ -39,7 +38,7 @@
 
 A website blocker sees the address of every tab you open. The Chrome Web Store has plenty of them, and I had no way to tell what most of them do with that. So I wanted one small enough to check in one sitting.
 
-- **1,253 lines of plain JavaScript in five files.** No build step, no libraries, nothing minified.
+- **Plain JavaScript you can read.** No build step, no libraries, nothing minified.
 - **No host permissions.** Busted sees the address of a tab. It cannot read or change what is on the page.
 - **No network requests.** This prints nothing:
   ```sh
