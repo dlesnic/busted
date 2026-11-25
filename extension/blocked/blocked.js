@@ -311,7 +311,6 @@ async function spin() {
   freeSpin = false;
   const odds = passOdds(await spinsToday());
   await countSpin();
-  // TEST ONLY (remove before publishing): #win in the URL forces a landing on the pass slice.
   // Decide the outcome first, then aim the wheel at a random spot inside it.
   const passDeg = SLICES[0].deg;
   const target = FORCE_WIN || Math.random() < odds

@@ -61,8 +61,28 @@ async function waitFor(fn, what, timeout = 8000, step = 100) {
 const eq = (a, b, what) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${what}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
 const ok = (c, what) => { if (!c) throw new Error(`failed: ${what}`); };
 
+/** Run code inside the extension's service worker, waking it first if it is asleep. */
+async function swEval(fn, arg) {
+  for (let i = 0; i < 40; i++) {
+    const w = ctx.serviceWorkers()[0];
+    if (w) { try { return await w.evaluate(fn, arg); } catch {} }
+    await api(() => chrome.storage.session.set({ wake: Date.now() }));
+    await sleep(100);
+  }
+  throw new Error("service worker not reachable");
+}
+/**
+ * What Chrome's idle check answers inside the extension: "active", "idle" or "locked".
+ * The real answer depends on whether someone is touching this computer, so tests always set it.
+ */
+const setIdleState = (state) => swEval((s) => { chrome.idle.queryState = async () => s; }, state);
+
 async function reset() {
   for (const p of ctx.pages()) if (p !== ctl) await p.close();
+  await setIdleState("active");
+  // Closing the pages makes the extension count one last step. Let that finish, so it cannot write into the next test.
+  await sleep(250);
+  await api(() => chrome.storage.session.remove("track"));
   await api(() => chrome.storage.local.clear());
   await waitFor(async () => (await rules()).length === 0, "rules cleared after reset");
   await ctl.reload();
@@ -800,7 +820,7 @@ await test("rate: asked once after three days, never during the first days, answ
   ok(!(await shown()), "not asked during a focus session");
   await api(() => chrome.storage.local.remove("focus"));
   await ctl.reload();
-  ok(await shown(), "asked after three days");
+  await waitFor(shown, "asked after three days");
 
   await ctl.click("#rate-no");
   ok(!(await shown()), "hidden after No thanks");
@@ -817,6 +837,257 @@ await test("rate: asked once after three days, never during the first days, answ
   eq((await store("rate")).rate.answer, "yes", "answer saved");
   await ctl.bringToFront();
   ok(!(await shown()), "hidden after Rate");
+});
+
+// ---------------------------------------------------------------- away from the computer
+await test("idle: no time is counted while nobody is at the computer", async () => {
+  await setStore({ sites: [site("lim.test", { limit: 30 })], insights: { on: true, since: Date.now() } });
+  const used = async () => ((await store("usage")).usage?.secs || {})["lim.test"] || 0;
+  const seen = async () => ((await store("act:" + todayKey()))["act:" + todayKey()]?.s || {})["lim.test"] || 0;
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(b, "http://fine.test/", "other site loads");
+  await loads(a, "http://lim.test/", "limited site loads");
+  await b.bringToFront(); await sleep(400);
+
+  await setIdleState("idle");
+  await a.bringToFront(); await sleep(2500);
+  await b.bringToFront(); await sleep(400);
+  const u1 = await used(), s1 = await seen();
+  ok(u1 < 0.6 && s1 < 0.6, `idle and silent: nothing counted (limit ${u1} s, insights ${s1} s)`);
+
+  await setIdleState("locked");
+  await a.bringToFront(); await sleep(2000);
+  await b.bringToFront(); await sleep(400);
+  ok((await used()) - u1 < 0.6, "locked screen: nothing counted");
+
+  await setIdleState("active");
+  await a.bringToFront(); await sleep(400);     // the first step after coming back is not counted
+  await b.bringToFront(); await sleep(400);
+  const u2 = await used(), s2 = await seen();
+  await a.bringToFront(); await sleep(2500);
+  await b.bringToFront(); await sleep(400);
+  const du = (await used()) - u2, ds = (await seen()) - s2;
+  console.log(`      back at the computer ~2.9 s: limit +${du.toFixed(1)} s, insights +${ds.toFixed(1)} s`);
+  ok(du > 2.2 && du < 4 && ds > 2.2 && ds < 4, "counted again once someone is back");
+});
+
+// ---------------------------------------------------------------- insights
+const txt = (p, sel) => p.textContent(sel).then((t) => t.trim());
+const actToday = async () => { const k = "act:" + todayKey(); return (await store(k))[k] || null; };
+const actKeys = () => api(() => chrome.storage.local.get(null).then((all) => Object.keys(all).filter((k) => k.startsWith("act:")).sort()));
+
+await test("insights: nothing is recorded until it is turned on", async () => {
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(a, "http://youtube.com/", "site loads");
+  await loads(b, "http://fine.test/", "other site loads");
+  await a.bringToFront(); await sleep(1500);
+  await b.bringToFront(); await sleep(400);
+  eq(await actKeys(), [], "no activity records");
+});
+
+await test("insights: time in the front tab is recorded per site, with opens and the hour", async () => {
+  await setStore({ insights: { on: true, since: Date.now() } });
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(b, "http://fine.test/", "other site loads");
+  await loads(a, "http://m.youtube.com/watch?v=1", "site loads");
+  await b.bringToFront(); await sleep(400);
+  const y0 = ((await actToday())?.s || {})["youtube.com"] || 0;
+  await a.bringToFront(); await sleep(3000);
+  await b.bringToFront(); await sleep(400);
+  const day = await actToday();
+  const added = (day.s["youtube.com"] || 0) - y0;
+  console.log(`      in front ~3.4 s: +${added.toFixed(1)} s`);
+  ok(added > 2.8 && added < 4.5, `front tab is counted under the site name (added ${added.toFixed(1)} s)`);
+  ok(!Object.keys(day.s).some((k) => k.includes("/") || k.includes("m.youtube")), `only site names are kept: ${Object.keys(day.s)}`);
+  ok(day.v["youtube.com"] >= 1, "an open is counted");
+  const hour = day.h[new Date().getHours()];
+  ok(hour && hour[1] >= added - 0.5, `the hour holds the time as distraction: ${JSON.stringify(day.h)}`);
+  ok(day.s["fine.test"] === undefined || day.s["fine.test"] < 5, "the other site has its own entry");
+});
+
+await test("insights: the minutes a site was in front are kept as time ranges", async () => {
+  await setStore({ insights: { on: true, since: Date.now() } });
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(b, "http://fine.test/", "other site loads");
+  await loads(a, "http://youtube.com/", "site loads");
+  await a.bringToFront(); await sleep(2000);
+  await b.bringToFront(); await sleep(400);
+  const spans = (await actToday())?.t?.["youtube.com"];
+  const n = new Date(), m = n.getHours() * 60 + n.getMinutes();
+  ok(Array.isArray(spans) && spans.length >= 1, `ranges are kept: ${JSON.stringify(spans)}`);
+  const [from, to] = spans[spans.length - 1];
+  ok(from <= m && to >= m && to - from <= 3, `the range covers this minute (${m}): ${JSON.stringify(spans)}`);
+});
+
+await test("insights: turning it off stops the recording, and old days are dropped", async () => {
+  await setStore({ insights: { on: true, since: Date.now() }, "act:2020-01-01": { s: { "old.test": 99 } } });
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(a, "http://reddit.com/", "site loads");
+  await loads(b, "http://fine.test/", "other site loads");
+  await a.bringToFront(); await sleep(1200);
+  await b.bringToFront(); await sleep(400);
+  ok(((await actToday())?.s || {})["reddit.com"] > 0.5, "recorded while on");
+  eq((await actKeys()).includes("act:2020-01-01"), false, "a day older than 90 days is removed");
+  await setStore({ insights: { on: false } });
+  await sleep(300);
+  const before = (await actToday()).s["reddit.com"];
+  await a.bringToFront(); await sleep(1500);
+  await b.bringToFront(); await sleep(400);
+  eq((await actToday()).s["reddit.com"], before, "nothing added while off");
+});
+
+await test("insights: the toolbar icon shows today's distraction time, colored by Hoot's mood", async () => {
+  const badge = () => api(() => chrome.action.getBadgeText({}));
+  const color = () => api(() => chrome.action.getBadgeBackgroundColor({}));
+  const today = "act:" + todayKey(), hour = new Date().getHours();
+  // 95 minutes on distracting sites already today
+  await setStore({ insights: { on: true, since: Date.now() }, [today]: { s: { "youtube.com": 5700 }, v: {}, h: { [hour]: [0, 5700, 0] } } });
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await loads(a, "http://youtube.com/", "site loads");
+  await loads(b, "http://fine.test/", "other site loads");
+  await a.bringToFront(); await sleep(600);
+  await b.bringToFront(); await sleep(400);
+  await waitFor(async () => (await badge()) === "1h35", "the icon shows 1h35");
+  eq(await color(), [255, 92, 138, 255], "Hoot is annoyed: pink");
+  await ctl.reload();
+  await sleep(300);
+  eq(await badge(), "1h35", "opening the popup leaves it in place");
+  ok(await ctl.getAttribute("#ins-hoot", "class").then((c) => /mood-annoyed/.test(c)), "Hoot in the popup is annoyed");
+  // marking the site as work takes its time out of the count
+  await setStore({ siteKinds: { "youtube.com": "work" } });
+  await waitFor(async () => (await badge()) === "0m", "back to 0m once YouTube counts as work");
+  eq(await color(), [61, 220, 151, 255], "Hoot is calm: green");
+  // turning Insights off removes it
+  await setStore({ insights: { on: false, since: Date.now() } });
+  await waitFor(async () => (await badge()) === "", "no number while Insights is off");
+});
+
+// ---------------------------------------------------------------- dashboard
+const dayKeyAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); const p = (x) => String(x).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
+/** Seven days of the same activity: 100 minutes of YouTube from 22:00 to 23:40, 60 minutes of Google Docs from 10:00 to 11:00. */
+const seedWeek = () => setStore({
+  insights: { on: true, since: Date.now() - 8 * 86400000 },
+  ...Object.fromEntries([0, 1, 2, 3, 4, 5, 6].map((n) => ["act:" + dayKeyAgo(n), {
+    s: { "youtube.com": 6000, "docs.google.com": 3600 }, v: { "youtube.com": 4, "docs.google.com": 3 }, h: { 22: [0, 3600, 0], 23: [0, 2400, 0], 10: [3600, 0, 0] },
+    t: { "youtube.com": [[1320, 1420]], "docs.google.com": [[600, 660]] },
+  }])),
+});
+const dash = async () => { const p = await ctx.newPage(); await p.goto(ext("dashboard/dashboard.html")); await p.waitForSelector("body[data-ready]"); return p; };
+
+await test("dashboard: while insights are off it only offers to turn them on", async () => {
+  const p = await dash();
+  ok(await p.isVisible("#turn-on"), "turn on button is shown");
+  ok(await p.isHidden("#board"), "no numbers are shown");
+  await p.click("#turn-on");
+  await waitFor(async () => (await store("insights")).insights?.on === true, "insights turned on");
+  await waitFor(() => p.isVisible("#board"), "the board appears");
+  ok((await txt(p, "#cards")).includes("Not enough data yet"), "says there is no data yet");
+});
+
+await test("dashboard: shows the week's totals, the sites and what stands out", async () => {
+  await seedWeek();
+  const p = await dash();
+  eq(await txt(p, "#k-total"), "18h 40m", "total time");
+  eq(await txt(p, "#k-work"), "7h", "work time");
+  eq(await txt(p, "#k-distraction"), "11h 40m", "distraction time");
+  eq(await p.$$eval("#sites .site-row", (rows) => rows.map((r) => r.dataset.site)), ["youtube.com", "docs.google.com"], "sites, biggest first");
+  eq(await txt(p, '#sites .site-row[data-site="youtube.com"] .time'), "11h 40m", "time per site");
+  eq(await p.$eval('#sites .site-row[data-site="youtube.com"] select.kind', (e) => e.value), "distraction", "kind of a known site");
+  ok((await txt(p, '.card[data-id="top"]')).includes("youtube.com"), "names the biggest distraction");
+  ok((await txt(p, '.card[data-id="peak"]')).includes("22:00"), "names the drift hours");
+  eq(await p.$$eval("#chart .day", (d) => d.length), 7, "one bar per day");
+  ok(await p.getAttribute("#hoot", "class").then((c) => /mood-(annoyed|furious)/.test(c)), "Hoot is not happy about 100 minutes of YouTube today");
+  await p.click('#range [data-range="1"]');
+  eq(await txt(p, "#k-total"), "2h 40m", "today only");
+});
+
+await test("dashboard: suggests blocking a site at the hours it is used, and adds the block in one click", async () => {
+  await seedWeek();
+  const p = await dash();
+  const card = '#suggest .sugg[data-site="youtube.com"]';
+  ok((await txt(p, card)).includes("22:00"), "names the hours");
+  eq(await p.$$eval(`${card} .act`, (b) => b.map((x) => x.textContent.trim())), ["Block 22:00-00:00 every day", "Limit to 60 min a day"], "a first choice and an alternative");
+  ok(!(await p.$('#suggest .sugg[data-site="docs.google.com"]')), "no block suggested for a work site");
+  await p.click(`${card} .act >> nth=0`);
+  await waitFor(async () => (await store("sites")).sites?.length === 1, "site added to the list");
+  const [s] = (await store("sites")).sites;
+  eq([s.domain, s.enabled, s.schedule?.days, s.schedule?.start, s.schedule?.end, "limit" in s], ["youtube.com", true, [0, 1, 2, 3, 4, 5, 6], "22:00", "00:00", false], "blocked from 22:00 to midnight every day");
+  await waitFor(async () => !(await p.$(card)), "the suggestion is gone once the site is on the list");
+});
+
+await test("dashboard: every site row has its own block and limit buttons, and shows the rule it has", async () => {
+  await seedWeek();
+  const p = await dash();
+  const row = '#sites .site-row[data-site="youtube.com"]';
+  await p.click(`${row} .do-block`);
+  await waitFor(async () => (await store("sites")).sites?.length === 1, "blocked from the row");
+  eq((await store("sites")).sites[0].schedule, null, "blocked all the time");
+  await waitFor(async () => (await txt(p, `${row} .rule`)) === "Blocked", "the row says it is blocked");
+  await p.click(`${row} .do-remove`);
+  await waitFor(async () => (await store("sites")).sites.length === 0, "removed from the list");
+  await waitFor(() => p.isVisible(`${row} .do-limit`), "the buttons are back");
+  await p.selectOption(`${row} .do-limit`, "30");
+  await waitFor(async () => (await store("sites")).sites?.[0]?.limit === 30, "a 30 minute daily limit");
+  await waitFor(async () => (await txt(p, `${row} .rule`)) === "Limit 30 min a day", "the row shows the limit");
+});
+
+await test("dashboard: rules cannot be removed from the dashboard during a focus session", async () => {
+  await seedWeek();
+  await setStore({ sites: [site("youtube.com")], focus: { until: Date.now() + 600000, mode: "list" } });
+  const p = await dash();
+  const row = '#sites .site-row[data-site="youtube.com"]';
+  ok((await txt(p, `${row} .rule`)).includes("Blocked"), "shows the rule");
+  ok(!(await p.$(`${row} .do-remove`)), "no remove button while focusing");
+});
+
+await test("dashboard: shows when each site is used", async () => {
+  await seedWeek();
+  const p = await dash();
+  const row = '#sites .site-row[data-site="youtube.com"]';
+  eq(await txt(p, `${row} .when`), "mostly 22:00-00:00", "the usual hours over the week");
+  await p.click('#range [data-range="1"]');
+  await waitFor(async () => (await txt(p, `${row} .when`)) === "22:00-23:40", "today's exact range");
+});
+
+await test("dashboard: marking a site as work moves its time out of distractions", async () => {
+  await seedWeek();
+  const p = await dash();
+  await p.selectOption('#sites .site-row[data-site="youtube.com"] select.kind', "work");
+  await waitFor(async () => (await txt(p, "#k-distraction")) === "0m", "no distraction time left");
+  eq(await txt(p, "#k-work"), "18h 40m", "all of it counts as work");
+  eq((await store("siteKinds")).siteKinds, { "youtube.com": "work" }, "the choice is saved");
+});
+
+await test("dashboard: pause stops the recording and delete removes every day", async () => {
+  await seedWeek();
+  const p = await dash();
+  await p.click("#pause");
+  await waitFor(async () => (await store("insights")).insights.on === false, "paused");
+  eq((await actKeys()).length, 7, "pausing keeps the data");
+  await p.click("#wipe");
+  eq((await actKeys()).length, 7, "one click does not delete");
+  await p.click("#wipe");
+  await waitFor(async () => (await actKeys()).length === 0, "every day record is gone");
+});
+
+await test("popup: shows today's time and opens the dashboard", async () => {
+  await seedWeek();
+  await ctl.reload();
+  ok((await txt(ctl, "#ins-today")).includes("1h 40m"), `today's distraction time is shown: ${await txt(ctl, "#ins-today")}`);
+  ok(await ctl.isHidden("#ins-on"), "the offer to turn it on is gone once it is on");
+  await ctl.click("#ins-open");
+  const want = ext("dashboard/dashboard.html");
+  await waitFor(() => api((u) => chrome.tabs.query({}).then((ts) => ts.some((t) => (t.pendingUrl || t.url || "").startsWith(u))), want), "a tab opened on the dashboard");
+  await ctl.bringToFront();
+});
+
+await test("popup: insights can be turned on from the popup", async () => {
+  await ctl.reload();
+  ok(await ctl.isVisible("#ins-on"), "the offer is shown while off");
+  ok(await ctl.isHidden("#ins-open"), "no link to the dashboard before it is on");
+  await ctl.click("#ins-on");
+  await waitFor(async () => (await store("insights")).insights?.on === true, "turned on");
+  await waitFor(() => ctl.isVisible("#ins-open"), "the popup now links to the dashboard");
 });
 
 // ---------------------------------------------------------------- wrap up

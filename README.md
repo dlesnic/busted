@@ -44,7 +44,7 @@ A website blocker sees the address of every tab you open. The Chrome Web Store h
   ```sh
   grep -rnE "fetch\(|XMLHttpRequest|WebSocket|sendBeacon" extension/
   ```
-- **No account, no analytics.** Your list, schedules and counters stay in `chrome.storage.local` on your device.
+- **No account, no analytics.** Your list, schedules and counters stay in `chrome.storage.local` on your device. So do Insights, if you turn them on.
 - **The store version is built from this code.** `tools/package.sh` zips the `extension/` folder as it is, and that zip is what I upload. The tag [`v1.3.1`](https://github.com/dlesnic/busted/tree/v1.3.1) is the exact source of the version in the store today.
 
 Two things open a web page in your browser. Removing the extension opens a short "why did you leave" page on gotbusted.app, with the version number in the address and nothing else. The "Rate Busted" button opens the Chrome Web Store.
@@ -64,9 +64,11 @@ Two things open a web page in your browser. Removing the extension opens a short
 
 **Schedules.** Pick the days and the hours. A window that ends before it starts runs overnight, like 23:00 to 07:00.
 
-**Daily limits.** 15, 30, 60 or your own number of minutes a day. Only time with the site in the tab in front of you counts. When the minutes run out, the site is blocked until midnight.
+**Daily limits.** 15, 30, 60 or your own number of minutes a day. Only time with the site in the tab in front of you counts, and only while you are at the computer. When the minutes run out, the site is blocked until midnight.
 
 **Focus sessions.** 25, 50 or up to 180 minutes. Block your list, or block everything except the few sites you need. There is no pause, and ending early takes a 60 second wait. When the session ends, blocked tabs go back to the page they were on.
+
+**Insights, if you turn them on.** A page that shows where your browsing time goes: time per site, work against distractions, day by day, and the hours when you drift. It shows when each site was open, suggests blocks (a daily limit, a block for the hours you usually drift, or a full block for a site you keep checking), and every site has its own Block and Limit buttons. The toolbar icon shows today's time on distracting sites. Only site names and times are kept, in your browser, for 90 days. It is off until you switch it on, and you can pause it or delete everything.
 
 **No way around it through an open tab.** Tabs already on a site you just blocked are sent to the blocked page. The Back button and cached pages are covered too.
 
@@ -112,9 +114,13 @@ extension/
                                  counts daily-limit time, sends blocked tabs to the blocked page
   popup/                         the popup: the list, the schedule and limit editor, focus sessions
   blocked/                       the blocked page and the wheel
+  dashboard/                     the Insights page
   lib/shared.js                  the rules: is this address blocked right now
   lib/presets.js                 the Quick add sites
+  lib/categories.js              which sites count as work and which as distraction
+  lib/insights.js                the Insights sums and advice
   icons/  art/                   icons and mascot art
+tests/unit.mjs                   tests for the Insights sums
 tests/e2e.mjs                    end-to-end tests
 tools/package.sh                 builds the store zip
 ```
@@ -129,14 +135,15 @@ tools/package.sh                 builds the store zip
 | Permission | Why |
 |---|---|
 | `declarativeNetRequest` | Blocks requests for the sites on your list |
-| `tabs` | Reads the address of open tabs, to send a tab on a blocked site to the blocked page and to count time for daily limits. Addresses are not saved or sent anywhere |
+| `tabs` | Reads the address of open tabs, to send a tab on a blocked site to the blocked page and to count time for daily limits. Nothing is sent anywhere. With Insights turned on, the site name (like `youtube.com`) and the time on it are saved on your device; full addresses never are |
 | `storage` | Saves your list and settings on your device |
 | `alarms` | Wakes the extension for schedules, passes, limits and focus sessions |
 | `favicon` | Shows site icons from Chrome's own local icon cache |
+| `idle` | Tells whether anyone is at the computer, so time is not counted for a page left open while you are away |
 
 ## Tests
 
-41 end-to-end tests drive the real extension in Chromium: the popup, the blocked page, the wheel, focus sessions and daily limits. They take about 4 minutes.
+57 end-to-end tests drive the real extension in Chromium: the popup, the blocked page, the wheel, focus sessions, daily limits and Insights. They take about 5 minutes. 37 unit tests cover the Insights sums and suggestions.
 
 ```sh
 npm install

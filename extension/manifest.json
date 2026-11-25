@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Busted: Website Blocker & Focus Mode",
-  "version": "1.3.2",
-  "description": "Block distracting websites, set daily limits, run focus sessions. Slip up and a grumpy owl catches you. Nothing leaves your device.",
+  "version": "1.4.0",
+  "description": "Website blocker and screen time tracker. Block sites on a schedule or with daily limits, block YouTube Shorts. Free, private.",
   "permissions": [
     "declarativeNetRequest",
     "storage",
     "alarms",
     "tabs",
-    "favicon"
+    "favicon",
+    "idle"
   ],
   "background": {
     "service_worker": "background/service-worker.js",

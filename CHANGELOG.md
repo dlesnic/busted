@@ -2,9 +2,18 @@
 
 Dates are the day each version was built.
 
-## 1.3.2 (in development)
+## 1.4.0 (2026-11-25)
 
-- The files moved into folders (`popup/`, `blocked/`, `background/`, `lib/`). Nothing changes in how it works.
+- Insights: a page that shows where your browsing time goes. Time per site, work against distractions, day by day, and the hours when you drift. It is off until you turn it on.
+- What stands out: your biggest distraction, your drift hours and sites you open out of habit.
+- New store summary: "Website blocker and screen time tracker...".
+- Hoot reacts to your day on the Insights page and in the popup, and the toolbar icon shows today's time on distracting sites, in green, purple, pink or red as it grows.
+- You can mark any site as work, neutral or distraction, pause the recording, or delete everything.
+- When each site was open: today's time ranges, and the usual hours over 7 or 30 days.
+- Suggested blocks, each with a first choice and an alternative, and Block / Limit buttons on every site.
+- Only site names and times are kept, only in your browser, for 90 days.
+- Time is no longer counted for a page left open while you are away: after two minutes without keyboard or mouse the count stops, unless the tab is playing sound. A locked screen never counts. This applies to daily limits too, and needs one new permission, `idle`, which shows no warning.
+- The files moved into folders (`popup/`, `blocked/`, `background/`, `lib/`, `dashboard/`).
 
 ## 1.3.1 (2026-11-18)
 

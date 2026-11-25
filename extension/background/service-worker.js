@@ -1,4 +1,6 @@
 import { blockedNow, findBlock, focusActive, focusEnd, focusOpenHosts, limitLeft, loadState, siteBlocked, siteKey, todayKey, urlMatches } from "../lib/shared.js";
+import { kindOf, siteOf } from "../lib/categories.js";
+import { addSpan, addTime, addVisit, BADGE_COLOR, badgeText, countable, DAY_PREFIX, hostOf, KEEP_DAYS, lastDays, mood, summarize } from "../lib/insights.js";
 
 // Re-evaluate schedules every minute.
 const ALARM = "focus-tick";
@@ -12,6 +14,8 @@ const UNINSTALL_URL = "https://gotbusted.app/uninstall/";
 // Daily limits: time is added in steps, at least once a minute. A longer gap
 // means the computer slept or Chrome was closed, so it is never counted in full.
 const MAX_STEP_SEC = 70;
+// No keyboard or mouse for this long means nobody is at the computer, unless the tab in front plays sound.
+const IDLE_SEC = 120;
 
 // Serialize all work so overlapping triggers never race on rule IDs or counters.
 let chain = Promise.resolve();
@@ -20,7 +24,7 @@ function run(job) {
   return chain;
 }
 const sync = () => run(doSync);
-/** Count daily-limit time, and re-sync only if a limit just ran out. */
+/** Count daily-limit and insights time, and re-sync only if a limit just ran out. */
 const count = () => run(async () => { if (await settle()) await doSync(); });
 
 async function doSync() {
@@ -71,15 +75,65 @@ async function endFocusIfOver() {
   else await chrome.storage.local.remove("focus");
 }
 
-// --- daily limits ---
-/** Daily-limit entries the user is looking at right now: the active tab of the focused window. */
-async function watchedLimits(st) {
+// --- daily limits and insights ---
+/** The web page the user is looking at right now: the active tab of the focused window. null if there is none. */
+async function frontTab() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (!tab?.url || !/^https?:/.test(tab.url)) return [];
+  if (!tab?.url || !/^https?:/.test(tab.url)) return null;
   const win = await chrome.windows.get(tab.windowId).catch(() => null);
-  if (!win?.focused) return [];
-  const u = new URL(tab.url);
+  return win?.focused ? tab : null;
+}
+
+/** Daily-limit entries that cover the page in front. */
+function watchedLimits(st, url) {
+  if (!url) return [];
+  const u = new URL(url);
   return st.sites.filter((s) => s.limit && s.enabled && !siteBlocked(s, st) && urlMatches(u, s)).map(siteKey);
+}
+
+/**
+ * Insights: add the time just spent on a site to today's record (seconds, and the minutes of the day it covered),
+ * and count an open of the site now in front. Only the site name is stored. One read and one write of today's small record; nothing else is touched.
+ */
+async function recordActivity(prevSite, secs, site, kinds) {
+  const opened = site && site !== prevSite;
+  if (!(prevSite && secs > 0) && !opened) return;
+  const key = DAY_PREFIX + todayKey();
+  const got = await chrome.storage.local.get(key);
+  const day = got[key] || {};
+  if (prevSite && secs > 0) {
+    const n = new Date();
+    const min = n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60;
+    addTime(day, prevSite, kindOf(prevSite, kinds), secs, n.getHours());
+    addSpan(day, prevSite, min - secs / 60, min);
+  }
+  if (opened) addVisit(day, site);
+  await chrome.storage.local.set({ [key]: day });
+  if (!got[key]) {
+    // First record of a new day: drop the days that are older than we keep.
+    const keep = new Set(lastDays(KEEP_DAYS).map((d) => DAY_PREFIX + d));
+    const old = Object.keys(await chrome.storage.local.get(null)).filter((k) => k.startsWith(DAY_PREFIX) && !keep.has(k));
+    if (old.length) await chrome.storage.local.remove(old);
+  }
+}
+
+/**
+ * The toolbar icon shows today's time on distracting sites while Insights is on, in Hoot's mood color.
+ * Chrome is only asked to change it when the text or the color actually changes.
+ */
+let shown = { text: null, color: null };
+async function showBadge(insights, kinds) {
+  let text = "", color = shown.color;
+  if (insights?.on) {
+    const key = DAY_PREFIX + todayKey();
+    const day = (await chrome.storage.local.get(key))[key] || {};
+    const secs = summarize({ today: day }, ["today"], kinds).byKind.distraction;
+    text = badgeText(secs);
+    color = BADGE_COLOR[mood(secs)];
+  }
+  if (color !== shown.color && color) await chrome.action.setBadgeBackgroundColor({ color });
+  if (text !== shown.text) await chrome.action.setBadgeText({ text });
+  shown = { text, color };
 }
 
 /**
@@ -90,10 +144,15 @@ async function settle() {
   const now = Date.now();
   const st = await loadState();
   const { track } = await chrome.storage.session.get("track");
+  const { insights, siteKinds } = await chrome.storage.local.get(["insights", "siteKinds"]);
+  const tab = await frontTab();
+  const url = tab?.url || null;
+  // Time counts only while someone is there: at the start of the step and now.
+  const here = countable(await chrome.idle.queryState(IDLE_SEC), tab?.audible || track?.audible);
+  const add = track && here && !track.away ? Math.min(MAX_STEP_SEC, Math.max(0, (now - track.since) / 1000)) : 0;
   let crossed = false;
 
   if (track?.keys.length) {
-    const add = Math.min(MAX_STEP_SEC, Math.max(0, (now - track.since) / 1000));
     const usage = st.usage.key === todayKey() ? st.usage : { key: todayKey(), secs: {} };
     for (const key of track.keys) {
       const site = st.sites.find((s) => s.limit && siteKey(s) === key);
@@ -106,8 +165,12 @@ async function settle() {
     await chrome.storage.local.set({ usage });
   }
 
-  const keys = await watchedLimits(st);
-  if (keys.length || track?.keys.length) await chrome.storage.session.set({ track: { keys, since: now } });
+  const keys = watchedLimits(st, url);
+  // Insights are recorded only after the user has turned them on.
+  const site = insights?.on && url ? siteOf(hostOf(url)) : "";
+  if (insights?.on) await recordActivity(track?.site || "", add, site, siteKinds || {});
+  await showBadge(insights, siteKinds || {});
+  if (keys.length || track?.keys.length || site || track?.site) await chrome.storage.session.set({ track: { keys, since: now, site, audible: !!tab?.audible, away: !here } });
   // Wake up at the moment the first of the watched limits runs out.
   const left = Math.min(...st.sites.filter((s) => keys.includes(siteKey(s))).map((s) => limitLeft(s, st.usage)));
   if (Number.isFinite(left) && left > 0) chrome.alarms.create(LIMIT_ALARM, { when: now + left * 1000 + 200 });
@@ -147,9 +210,12 @@ chrome.tabs.onReplaced.addListener(async (addedTabId) => {
   } catch (e) { console.warn(e); }
 });
 
-// Daily limits count only the tab being looked at: follow tab and window switches.
+// Daily limits and insights count only the tab being looked at: follow tab and window switches.
 chrome.tabs.onActivated.addListener(count);
 chrome.windows.onFocusChanged.addListener(count);
+// And only while someone is at the computer: note the moment they leave or come back.
+chrome.idle.setDetectionInterval(IDLE_SEC);
+chrome.idle.onStateChanged.addListener(count);
 
 /**
  * Tick on whole minutes, so a schedule switches at its start/end time instead
@@ -181,5 +247,7 @@ chrome.alarms.onAlarm.addListener((a) => {
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && (changes.sites || changes.passes || changes.focus || changes.focusAllow)) sync();
+  if (area !== "local") return;
+  if (changes.sites || changes.passes || changes.focus || changes.focusAllow) sync();
+  else if (changes.insights || changes.siteKinds) count();
 });

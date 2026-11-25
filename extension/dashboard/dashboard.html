@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Busted Insights</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/icons/icon32.png" />
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#"><img src="/icons/icon128.png" alt="" />Busted <span>Insights</span></a>
+    <div class="seg" id="range" hidden>
+      <button type="button" data-range="1">Today</button>
+      <button type="button" data-range="7">7 days</button>
+      <button type="button" data-range="30">30 days</button>
+    </div>
+  </header>
+
+  <!-- Shown until the user turns Insights on. Nothing is recorded before that. -->
+  <section id="off" class="off" hidden>
+    <img class="hoot-big" src="/art/hoot_v2.webp" alt="" />
+    <h1>See where your time goes</h1>
+    <p>Busted can keep a simple tally of the sites you spend time on and show it here: how much went to work, how much to distractions, and when you drift.</p>
+    <ul>
+      <li>It stays in this browser. Nothing is sent anywhere, and there is no account.</li>
+      <li>Only site names and the times you were on them are kept, like "youtube.com, 21:05-21:40". Never full addresses, page titles or searches.</li>
+      <li>You can pause it or delete everything at any time.</li>
+    </ul>
+    <button id="turn-on" class="primary" type="button">Turn on Insights</button>
+  </section>
+
+  <main id="board" hidden>
+    <section class="hero">
+      <div class="hoot-box">
+        <img id="hoot" class="mood-calm" src="/art/hoot_v2.webp" alt="Hoot" />
+        <div class="bubble"><b id="mood-line"></b><span id="mood-sub"></span></div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span>Time on sites</span><b id="k-total">0m</b><i id="k-total-sub"></i></div>
+        <div class="kpi work"><span>Work</span><b id="k-work">0m</b><i id="k-work-sub"></i></div>
+        <div class="kpi dis"><span>Distractions</span><b id="k-distraction">0m</b><i id="k-distraction-sub"></i></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Day by day <small id="chart-max"></small></h2>
+        <div id="chart" class="chart"></div>
+        <div class="legend"><i class="w"></i>Work <i class="d"></i>Distractions <i class="n"></i>Neutral</div>
+      </div>
+      <div class="panel">
+        <h2>When distractions happen</h2>
+        <div id="hours" class="hours"></div>
+        <div class="hours-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+        <p id="hours-note" class="muted"></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>What stands out</h2>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section id="suggest-box" hidden>
+      <h2>Suggested blocks</h2>
+      <div id="suggest" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Sites</h2>
+      <p class="muted small">When each site was open, how long, and what kind of site it is. Busted guesses the kind; change it if the guess is wrong, and the numbers follow.</p>
+      <div id="sites"></div>
+      <button id="more" type="button" class="link" hidden>Show all sites</button>
+    </section>
+  </main>
+
+  <footer id="foot" hidden>
+    <p>Kept only in this browser. Only site names and times are stored, and days older than 90 days are deleted.</p>
+    <div>
+      <button id="pause" type="button">Pause recording</button>
+      <button id="wipe" type="button" class="danger">Delete all data</button>
+    </div>
+  </footer>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

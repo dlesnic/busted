@@ -189,3 +189,19 @@ button:active { transform: scale(0.97); }
 .rate { margin-top: 12px; padding: 12px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); text-align: center; }
 .rate p { margin: 0 0 10px; }
 .rate-row { display: flex; gap: 8px; justify-content: center; }
+
+/* Insights strip */
+.ins { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); }
+.ins > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ins > div[hidden] { display: none; }
+.ins-btns { display: flex; align-items: center; gap: 4px; flex: none; }
+#ins-today b { font-variant-numeric: tabular-nums; }
+#ins-today .dis { color: var(--accent2); }
+.ins-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#ins-mood:empty { display: none; }
+#ins-hoot { width: 34px; height: auto; flex: none; transform-origin: 50% 90%; }
+@keyframes ins-huff { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: translateX(-2px) rotate(-5deg); } 90% { transform: translateX(2px) rotate(5deg); } 95% { transform: translateX(-1px) rotate(-3deg); } }
+@keyframes ins-rage { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-2px) rotate(-4deg); } 75% { transform: translateX(2px) rotate(4deg); } }
+#ins-hoot.mood-annoyed { animation: ins-huff 2.4s ease-in-out infinite; }
+#ins-hoot.mood-furious { animation: ins-rage 0.35s linear infinite; filter: drop-shadow(0 0 8px rgba(255, 92, 108, 0.8)); }
+@media (prefers-reduced-motion: reduce) { #ins-hoot { animation: none !important; } }

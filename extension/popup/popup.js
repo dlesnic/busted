@@ -3,6 +3,8 @@ import {
   loadState, blockedNow, siteStatus, focusActive, focusEnd, FOCUS_EXIT_WAIT_SEC, limitLeft,
 } from "../lib/shared.js";
 import { PRESET_GROUPS, PRESET_ICON } from "../lib/presets.js";
+import { DAY_PREFIX, fmt, mood, MOOD_LEVEL, MOOD_LINES, summarize } from "../lib/insights.js";
+import { todayKey } from "../lib/shared.js";
 
 const $ = (sel) => document.querySelector(sel);
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon first
@@ -28,7 +30,32 @@ async function load() {
   const saved = (await chrome.storage.local.get("rate")).rate;
   if (saved) rate = saved; else await chrome.storage.local.set({ rate });
   render();
+  renderInsights();
 }
+
+// Insights strip: an offer to turn them on, or today's time with a link to the full page.
+async function renderInsights() {
+  const key = DAY_PREFIX + todayKey();
+  const got = await chrome.storage.local.get(["insights", "siteKinds", key]);
+  const ins = got.insights || {};
+  $("#ins").hidden = !ins.since && !!ins.hidden;
+  $("#ins-off").hidden = !!ins.since;
+  $("#ins-live").hidden = !ins.since;
+  if (!ins.since) return;
+  const sum = summarize({ today: got[key] || {} }, ["today"], got.siteKinds || {});
+  const line = $("#ins-today");
+  line.textContent = "";
+  const b = (text, cls) => { const e = document.createElement("b"); e.textContent = text; if (cls) e.className = cls; return e; };
+  if (!ins.on) line.append("Insights are paused");
+  else line.append("Today: ", b(fmt(sum.total)), " on sites, ", b(fmt(sum.byKind.distraction), "dis"), " on distractions");
+  // Hoot only speaks up when it is getting out of hand.
+  const m = ins.on ? mood(sum.byKind.distraction) : "calm";
+  $("#ins-hoot").className = `mood-${m}`;
+  $("#ins-mood").textContent = MOOD_LEVEL[m] >= MOOD_LEVEL.annoyed ? MOOD_LINES[m].join(" ") : "";
+}
+$("#ins-on").addEventListener("click", async () => { await chrome.storage.local.set({ insights: { on: true, since: Date.now() } }); renderInsights(); });
+$("#ins-hide").addEventListener("click", async () => { await chrome.storage.local.set({ insights: { hidden: true } }); renderInsights(); });
+$("#ins-open").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html") }));
 
 async function save() {
   await chrome.storage.local.set({ sites: st.sites });
@@ -388,6 +415,7 @@ $("#more").addEventListener("click", () => {
 
 // Passes, daily-limit time and focus sessions can change while the popup is open.
 chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area === "local" && Object.keys(changes).some((k) => k === "insights" || k.startsWith(DAY_PREFIX))) renderInsights();
   if (area !== "local" || !STATE_KEYS.some((k) => k !== "sites" && changes[k])) return;
   const fresh = await loadState();
   st = { ...fresh, sites: st.sites };
