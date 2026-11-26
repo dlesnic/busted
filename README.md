@@ -29,6 +29,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/dashboard.png" width="800" alt="The Insights page for 7 days: 45h 27m on sites, 27h 41m of work and 17h 34m of distractions, a day by day chart, and the hours when distractions happen.">
+</p>
+
+<p align="center">
   <img src="docs/demo.gif" width="800" alt="The page you get on tiktok.com when it is blocked. The cursor goes for the Unblock button three times and the button jumps away each time.">
 </p>
 
@@ -45,7 +49,7 @@ A website blocker sees the address of every tab you open. The Chrome Web Store h
   grep -rnE "fetch\(|XMLHttpRequest|WebSocket|sendBeacon" extension/
   ```
 - **No account, no analytics.** Your list, schedules and counters stay in `chrome.storage.local` on your device. So do Insights, if you turn them on.
-- **The store version is built from this code.** `tools/package.sh` zips the `extension/` folder as it is, and that zip is what I upload. The tag [`v1.3.1`](https://github.com/dlesnic/busted/tree/v1.3.1) is the exact source of the version in the store today.
+- **The store version is built from this code.** `tools/package.sh` zips the `extension/` folder as it is, and that zip is what I upload. The tag [`v1.4.0`](https://github.com/dlesnic/busted/tree/v1.4.0) is the exact source of the version in the store today.
 
 Two things open a web page in your browser. Removing the extension opens a short "why did you leave" page on gotbusted.app, with the version number in the address and nothing else. The "Rate Busted" button opens the Chrome Web Store.
 
