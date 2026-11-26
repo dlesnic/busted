@@ -1,4 +1,12 @@
 <p align="center">
+  <img src="docs/dashboard.png" width="800" alt="The Insights page for 7 days: 45h 27m on sites, 27h 41m of work and 17h 34m of distractions, a day by day chart, and the hours when distractions happen.">
+</p>
+
+<p align="center">
+  <img src="docs/dashboard-sites.png" width="800" alt="Suggested blocks for youtube.com, reddit.com and x.com, each with a Block button and a daily limit button, above the list of sites with the time on each one and its own Block and Limit buttons.">
+</p>
+
+<p align="center">
   <a href="https://gotbusted.app"><img src="docs/banner.png" width="720" alt="Busted, the website blocker that judges you. Hoot the owl stands between a raccoon and a fox."></a>
 </p>
 
@@ -26,10 +34,6 @@
   <a href="#how-it-works">How it works</a> ·
   <a href="https://gotbusted.app">gotbusted.app</a> ·
   <a href="https://www.youtube.com/watch?v=rmgBHqof8_Y">Video</a>
-</p>
-
-<p align="center">
-  <img src="docs/dashboard.png" width="800" alt="The Insights page for 7 days: 45h 27m on sites, 27h 41m of work and 17h 34m of distractions, a day by day chart, and the hours when distractions happen.">
 </p>
 
 <p align="center">
